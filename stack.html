@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Stack Visualizer</title>
+
+<style>
+body {
+    font-family: Arial;
+    text-align: center;
+    margin-top: 30px;
+}
+
+input {
+    padding: 6px;
+    font-size: 18px;
+}
+
+button {
+    padding: 8px 14px;
+    font-size: 18px;
+    margin-left: 5px;
+}
+
+#pointerRow {
+    display: flex;
+    justify-content: center;
+    height: 30px;
+    font-weight: bold;
+    color: red;
+}
+
+.pointer {
+    width: 106px;
+}
+
+#stack {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.slot {
+    width: 90px;
+    height: 90px;
+    border: 3px solid black;
+    margin: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.block {
+    width: 90px;
+    height: 90px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 22px;
+    border-radius: 8px;
+    transition: transform 1s ease;
+}
+
+.flying {
+    position: absolute;
+    z-index: 1000;
+}
+
+#indexRow {
+    display: flex;
+    justify-content: center;
+    margin-top: 5px;
+    font-weight: bold;
+}
+
+.index {
+    width: 106px;
+}
+
+#algoBox {
+    width: 360px;
+    margin: auto;
+    margin-top: 30px;
+    padding: 15px;
+    border: 2px solid #444;
+    border-radius: 10px;
+    background: #f4f4f4;
+    text-align: left;
+    font-family: monospace;
+}
+
+.highlight {
+    background: yellow;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Stack Visualizer</h2>
+
+<input id="value" placeholder="Enter value">
+<button onclick="pushStack()">Push</button>
+<button onclick="popStack()">Pop</button>
+
+<div id="pointerRow"></div>
+<div id="stack"></div>
+<div id="indexRow"></div>
+
+<div id="algoBox">
+<h3>Algorithm</h3>
+
+<div id="pushAlgo">
+<b>PUSH(x)</b><br>
+<span id="p1">1. if stack is full</span><br>
+<span id="p2">&nbsp;&nbsp;return "Overflow"</span><br>
+<span id="p3">2. else</span><br>
+<span id="p4">&nbsp;&nbsp;top = top + 1</span><br>
+<span id="p5">&nbsp;&nbsp;stack[top] = x</span>
+</div>
+
+<br>
+
+<div id="popAlgo">
+<b>POP()</b><br>
+<span id="po1">1. if stack is empty</span><br>
+<span id="po2">&nbsp;&nbsp;return "Underflow"</span><br>
+<span id="po3">2. else</span><br>
+<span id="po4">&nbsp;&nbsp;remove stack[top]</span><br>
+<span id="po5">&nbsp;&nbsp;top = top - 1</span>
+</div>
+</div>
+
+<script>
+const MAX = 6
+let stackArr = []
+let blocks = []
+let top = -1
+
+const stackDiv = document.getElementById("stack")
+const pointerRow = document.getElementById("pointerRow")
+const indexRow = document.getElementById("indexRow")
+const inputBox = document.getElementById("value")
+
+// create stack slots, pointers, and indexes
+for (let i = 0; i < MAX; i++) {
+    let pointer = document.createElement("div")
+    pointer.className = "pointer"
+    pointerRow.appendChild(pointer)
+
+    let slot = document.createElement("div")
+    slot.className = "slot"
+    stackDiv.appendChild(slot)
+
+    let index = document.createElement("div")
+    index.className = "index"
+    index.innerText = i
+    indexRow.appendChild(index)
+}
+
+// helper functions
+function updatePointers() {
+    for (let i = 0; i < MAX; i++) pointerRow.children[i].innerText = ""
+    if (top >= 0) pointerRow.children[top].innerText = "Top"
+}
+
+function randomColor() {
+    let r = Math.floor(Math.random() * 200)
+    let g = Math.floor(Math.random() * 200)
+    let b = Math.floor(Math.random() * 200)
+    return `rgb(${r},${g},${b})`
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function clearHighlight() {
+    document.querySelectorAll("#algoBox span").forEach(line => line.classList.remove("highlight"))
+}
+
+function highlight(id) {
+    clearHighlight()
+    document.getElementById(id).classList.add("highlight")
+}
+
+// PUSH
+async function pushStack() {
+    let val = inputBox.value
+    if (val === "") return
+
+    highlight("p1")
+    if (top === MAX - 1) {
+        highlight("p2")
+        alert("Stack Full")
+        return
+    }
+
+    highlight("p3")
+    await sleep(300)
+
+    // flying block animation
+    let flying = document.createElement("div")
+    flying.className = "block flying"
+    flying.innerText = val
+    flying.style.background = randomColor()
+    document.body.appendChild(flying)
+
+    let start = inputBox.getBoundingClientRect()
+    flying.style.top = start.top + "px"
+    flying.style.left = start.left + "px"
+
+    top++
+    let targetSlot = stackDiv.children[top]
+    let target = targetSlot.getBoundingClientRect()
+
+    await sleep(50)
+    let dx = target.left - start.left
+    let dy = target.top - start.top
+    flying.style.transform = `translate(${dx}px,${dy}px)`
+
+    await sleep(1000)
+    document.body.removeChild(flying)
+
+    highlight("p4")
+    await sleep(300)
+    highlight("p5")
+    await sleep(300)
+
+    let block = document.createElement("div")
+    block.className = "block"
+    block.innerText = val
+    block.style.background = randomColor()
+    targetSlot.appendChild(block)
+
+    stackArr.push(val)
+    blocks.push(block)
+    updatePointers()
+    clearHighlight()
+}
+
+// POP
+async function popStack() {
+    highlight("po1")
+    if (top === -1) {
+        highlight("po2")
+        alert("Stack Empty")
+        return
+    }
+
+    highlight("po3")
+    await sleep(300)
+    highlight("po4")
+
+    let topBlock = blocks[top]
+    topBlock.style.transform = "translateY(-140px)"
+    await sleep(1000)
+    topBlock.remove()
+    stackArr.pop()
+    blocks.pop()
+    highlight("po5")
+    top--
+    updatePointers()
+    clearHighlight()
+}
+</script>
+
+</body>
+</html>

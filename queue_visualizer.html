@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Animated Queue</title>
+    <style>
+        body{
+            font-family: Arial;
+            text-align: center;
+            margin-top: 50px;
+        }
+        input{
+            font-size: 16px;
+            padding: 5px;
+        }
+        button{
+            font-size: 16px;
+            padding: 5px 10px;
+            margin-left: 5px;
+        }
+        #queue-container{
+            display: flex;
+            justify-content: center;
+            margin-top: 50px;
+            position: relative;
+            height: 120px;
+        }
+        .queue-slot{
+            width: 60px;
+            height: 60px;
+            border: 2px solid black;
+            margin: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 18px;
+            position: relative;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+        .queue-slot.bounce{
+            transform: scale(1.2);
+        }
+        .queue-slot.flash{
+            border-color: green;
+        }
+        #pointer-row{
+            display: flex;
+            justify-content: center;
+            margin-top: 5px;
+            height: 20px;
+        }
+        .pointer{
+            width: 60px;
+            margin: 5px;
+            color: red;
+            font-weight: bold;
+            transition: transform 1.5s ease;
+        }
+        #message{
+            margin-top: 20px;
+            font-size: 20px;
+            color: blue;
+            height: 30px;
+        }
+        .block{
+            width: 60px;
+            height: 60px;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            position: absolute;
+            top: 0;
+            left: 0;
+            border-radius: 5px;
+            transition: transform 2s ease, top 2s ease, left 2s ease;
+            z-index: 10;
+        }
+        .fade-out{
+            transition: all 1s ease, opacity 0.8s ease;
+            opacity: 0;
+            transform: translateY(-80px) scale(1.3);
+            background-color: red;
+        }
+        .shift-left{
+            transition: transform 1s ease;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Animated Queue</h1>
+
+<input type="text" id="value" placeholder="Enter value">
+<button onclick="enqueue()">Enqueue</button>
+<button onclick="dequeue()">Dequeue</button>
+
+<div id="message"></div>
+<div>Queue Size: <span id="queue-size">0</span></div>
+<div id="queue-container"></div>
+<div id="pointer-row"></div>
+
+<script>
+let queue = new Array(10).fill(null);
+let front = -1;
+let rear = -1;
+
+const container = document.getElementById("queue-container");
+const pointerRow = document.getElementById("pointer-row");
+const message = document.getElementById("message");
+const queueSizeDisplay = document.getElementById("queue-size");
+
+function isEmpty(){ return front === -1 && rear === -1; }
+function isFull(){ return rear === queue.length - 1; }
+
+function displayQueue(){
+    container.innerHTML = "";
+    pointerRow.innerHTML = "";
+    for(let i=0;i<queue.length;i++){
+        let slot = document.createElement("div");
+        slot.className = "queue-slot";
+        slot.innerText = queue[i] === null ? "" : queue[i];
+        container.appendChild(slot);
+
+        let pointer = document.createElement("div");
+        pointer.className = "pointer";
+        if(i === front && i === rear){
+            pointer.innerText = "F/R";
+        } else if(i === front){
+            pointer.innerText = "F";
+        } else if(i === rear){
+            pointer.innerText = "R";
+        }
+        pointerRow.appendChild(pointer);
+    }
+    // Update queue size
+    let count = rear - front + 1;
+    queueSizeDisplay.innerText = isEmpty() ? 0 : count;
+}
+
+// Generate random pastel color
+function randomColor(){
+    let r = Math.floor((Math.random()*127)+127);
+    let g = Math.floor((Math.random()*127)+127);
+    let b = Math.floor((Math.random()*127)+127);
+    return `rgb(${r},${g},${b})`;
+}
+
+// Enqueue animation with curved flight + bounce + slot highlight
+function enqueue(){
+    let val = document.getElementById("value").value;
+    if(val === "") return;
+
+    if(isFull()){
+        message.innerText = "Queue Full";
+        let lastSlot = container.children[rear] || container.children[queue.length-1];
+        if(lastSlot) {
+            lastSlot.style.borderColor = "red";
+            setTimeout(()=>{ lastSlot.style.borderColor="black"; }, 500);
+        }
+        return;
+    }
+
+    // Flying block
+    let block = document.createElement("div");
+    block.className = "block";
+    block.innerText = val;
+    block.style.backgroundColor = randomColor();
+    document.body.appendChild(block);
+
+    let inputRect = document.getElementById("value").getBoundingClientRect();
+    block.style.top = (inputRect.top - 70) + "px";
+    block.style.left = inputRect.left + "px";
+
+    let targetSlot = container.children[rear + 1] || container.children[0];
+    let slotRect = targetSlot.getBoundingClientRect();
+
+    // Curved flight: simple arc using small Y adjustment
+    let deltaX = slotRect.left - inputRect.left;
+    let deltaY = slotRect.top - (inputRect.top - 70);
+    setTimeout(()=>{
+        block.style.transform = `translate(${deltaX}px, ${deltaY-20}px)`; // arc effect
+    },50);
+
+    setTimeout(()=>{
+        block.style.transform = `translate(${deltaX}px, ${deltaY}px)`; // land in slot
+    },1050);
+
+    setTimeout(()=>{
+        document.body.removeChild(block);
+        if(isEmpty()){
+            front = 0; rear = 0;
+        } else {
+            rear++;
+        }
+        queue[rear] = val;
+        displayQueue();
+
+        // Bounce + flash effect
+        let slot = container.children[rear];
+        slot.classList.add("bounce","flash");
+        setTimeout(()=>{ slot.classList.remove("bounce","flash"); }, 400);
+
+        message.innerText = "Enqueued " + val;
+    }, 2100); // matches slower animation
+}
+
+// Dequeue animation with smooth shift + fade
+function dequeue(){
+    if(isEmpty()){
+        message.innerText = "Queue Empty";
+        return;
+    }
+
+    let firstSlot = container.children[front];
+    let block = document.createElement("div");
+    block.className = "block";
+    block.innerText = queue[0];
+    block.style.backgroundColor = randomColor();
+    let rect = firstSlot.getBoundingClientRect();
+    block.style.top = rect.top + "px";
+    block.style.left = rect.left + "px";
+    document.body.appendChild(block);
+
+    setTimeout(()=>{ block.classList.add("fade-out"); },50);
+
+    // shift remaining blocks visually
+    for(let i=1;i<=rear;i++){
+        let slot = container.children[i];
+        slot.classList.add("shift-left");
+        slot.style.transform = "translateX(-70px)";
+    }
+
+    setTimeout(()=>{
+        document.body.removeChild(block);
+        for(let i=0;i<rear;i++){
+            queue[i] = queue[i+1];
+        }
+        queue[rear] = null;
+        rear--;
+        if(rear === -1) front = -1;
+        displayQueue();
+        message.innerText = "Dequeued " + block.innerText;
+    },1100);
+}
+
+displayQueue();
+</script>
+</body>
+</html>
