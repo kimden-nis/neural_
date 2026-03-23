@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Animated Stack with Top Pointer & Colors</title>
+<style>
+body{
+    text-align:center;
+    font-family: Arial;
+}
+
+input, button{
+    font-size:18px;
+    padding:6px;
+    margin:5px;
+}
+
+/* vertical stack container */
+#stackContainer{
+    margin:30px auto;
+    width:120px;
+    height:450px;
+    border:2px solid black;
+    display:flex;
+    flex-direction: column-reverse; /* bottom = base, top = end */
+    justify-content:flex-start;
+    align-items:center;
+    padding:5px;
+    position: relative;
+    background-color:#f8f8f8;
+}
+
+/* stack slots */
+.slot{
+    width:100px;
+    height:80px;
+    border:2px solid black;
+    margin:3px 0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+    font-weight:bold;
+    position:relative;
+    overflow:hidden;
+}
+
+/* top pointer arrow */
+#topPointer{
+    position:absolute;
+    width:0;
+    height:0;
+    border-left:10px solid transparent;
+    border-right:10px solid transparent;
+    border-bottom:20px solid red;
+    transition: top 0.5s ease;
+}
+
+/* flying block */
+.flying{
+    width:100px;
+    height:80px;
+    background-color:#4CAF50;
+    color:white;
+    font-weight:bold;
+    font-size:22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:5px;
+    position:absolute;
+    z-index:1000;
+    transition: all 1.2s ease; /* slower push */
+}
+</style>
+</head>
+<body>
+
+<h2>Vertical Animated Stack</h2>
+
+<input id="value" placeholder="Enter value">
+<button id="pushBtn">Push</button>
+<button id="popBtn">Pop</button>
+
+<div id="stackContainer"></div>
+<div id="topPointer"></div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+    const MAX = 5
+    let stack = []
+    let stackContainer = document.getElementById("stackContainer")
+    const pushBtn = document.getElementById("pushBtn")
+    const popBtn = document.getElementById("popBtn")
+    const inputBox = document.getElementById("value")
+    const topPointer = document.getElementById("topPointer")
+
+    // helper sleep
+    function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)) }
+
+    // generate random color
+    function randomColor(){
+        let r = Math.floor(Math.random()*200)
+        let g = Math.floor(Math.random()*200)
+        let b = Math.floor(Math.random()*200)
+        return `rgb(${r},${g},${b})`
+    }
+
+    // render stack slots
+    function renderStack(){
+        stackContainer.innerHTML = ""
+        for(let i=0;i<stack.length;i++){
+            let slot = document.createElement("div")
+            slot.className = "slot"
+            slot.innerText = stack[i].value
+            slot.style.backgroundColor = stack[i].color
+            stackContainer.appendChild(slot)
+        }
+
+        // update top pointer position
+        if(stack.length>0){
+            let topSlot = stackContainer.children[stack.length-1]
+            let rect = topSlot.getBoundingClientRect()
+            topPointer.style.left = (rect.left + rect.width/2 - 10) + "px"
+            topPointer.style.top = (rect.top - 25) + "px"
+            topPointer.style.display = "block"
+        } else {
+            topPointer.style.display = "none"
+        }
+    }
+
+    // push
+    pushBtn.onclick = async function(){
+        let val = inputBox.value
+        if(val === "") return
+        if(stack.length >= MAX){
+            alert("Stack Full")
+            return
+        }
+
+        let color = randomColor()
+
+        // create flying block
+        let block = document.createElement("div")
+        block.className = "flying"
+        block.innerText = val
+        block.style.backgroundColor = color
+        document.body.appendChild(block)
+
+        let inputRect = inputBox.getBoundingClientRect()
+        block.style.left = inputRect.left + "px"
+        block.style.top = inputRect.top + "px"
+
+        await sleep(50)
+
+        // target position
+        let targetY = stackContainer.getBoundingClientRect().bottom - (stack.length+1)*86
+        let targetX = stackContainer.getBoundingClientRect().left + 10
+        block.style.transform = `translate(${targetX - inputRect.left}px,${targetY - inputRect.top}px)`
+
+        await sleep(1200) // slower push
+
+        document.body.removeChild(block)
+        stack.push({value: val, color: color})
+        renderStack()
+        inputBox.value = ""
+    }
+
+    // pop
+    popBtn.onclick = async function(){
+        if(stack.length === 0){
+            alert("Stack Empty")
+            return
+        }
+
+        let topElement = stack[stack.length-1]
+
+        // flying block from top
+        let block = document.createElement("div")
+        block.className = "flying"
+        block.innerText = topElement.value
+        block.style.backgroundColor = topElement.color
+        document.body.appendChild(block)
+
+        let topSlot = stackContainer.children[stack.length-1]
+        let rect = topSlot.getBoundingClientRect()
+        block.style.left = rect.left + "px"
+        block.style.top = rect.top + "px"
+
+        await sleep(50)
+
+        // fly up
+        block.style.transform = `translate(0px,-120px)`
+        await sleep(700)
+
+        // fly left and fade
+        block.style.transition = "all 0.7s ease"
+        block.style.transform = `translate(-200px,-120px)`
+        block.style.backgroundColor = "red"
+        await sleep(700)
+
+        document.body.removeChild(block)
+        alert("Popped: " + topElement.value)
+        stack.pop()
+        renderStack()
+    }
+
+    renderStack()
+})
+</script>
+
+</body>
+</html>

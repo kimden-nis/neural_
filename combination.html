@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Data Structures Visualizer</title>
+
+<style>
+body{
+    font-family: Arial;
+    text-align:center;
+    background:#f4f6f8;
+}
+
+h1{
+    margin-top:20px;
+}
+
+.controls{
+    margin:20px;
+}
+
+button, input, select{
+    padding:8px;
+    margin:5px;
+    font-size:15px;
+}
+
+/* container */
+#container{
+    margin:30px auto;
+    width:600px;
+    min-height:120px;
+    border:2px solid #333;
+    display:flex;
+    align-items:center;
+    padding:10px;
+    background:white;
+    position:relative;
+}
+
+/* blocks */
+.block{
+    width:70px;
+    height:70px;
+    margin:5px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-weight:bold;
+    border-radius:6px;
+    box-shadow:0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* flying animation */
+.flying{
+    position:absolute;
+    width:70px;
+    height:70px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-weight:bold;
+    border-radius:6px;
+    transition: all 1s ease;
+    z-index:1000;
+}
+
+/* labels */
+.label{
+    position:absolute;
+    font-weight:bold;
+    color:red;
+}
+
+/* info */
+#info{
+    margin-top:10px;
+    font-size:18px;
+}
+
+/* message */
+#message{
+    margin-top:10px;
+    font-size:16px;
+    color:blue;
+    height:20px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>📊 Data Structures Visualizer</h1>
+
+<div class="controls">
+<select id="mode">
+    <option value="stack">Stack (LIFO)</option>
+    <option value="queue">Queue (FIFO)</option>
+</select>
+
+<input id="value" placeholder="Enter value">
+
+<button onclick="add()">Add</button>
+<button onclick="removeItem()">Remove</button>
+<button onclick="peek()">Peek / Front</button>
+<button onclick="autoDemo()">Auto Demo</button>
+
+<br>
+
+Speed:
+<input type="range" id="speed" min="300" max="2000" value="1000">
+</div>
+
+<div id="container"></div>
+
+<div id="info"></div>
+<div id="message"></div>
+
+<script>
+
+let data = []
+const MAX = 6
+
+const container = document.getElementById("container")
+const input = document.getElementById("value")
+const mode = document.getElementById("mode")
+const info = document.getElementById("info")
+const message = document.getElementById("message")
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)) }
+function speed(){ return document.getElementById("speed").value }
+
+function randomColor(){
+    return `hsl(${Math.random()*360},70%,60%)`
+}
+
+function showMessage(msg){
+    message.innerText = msg
+}
+
+function render(){
+    container.innerHTML=""
+
+    data.forEach((item,i)=>{
+        let d=document.createElement("div")
+        d.className="block"
+        d.innerText=item.value
+        d.style.background=item.color
+        container.appendChild(d)
+
+        // labels
+        if(mode.value==="stack" && i===data.length-1){
+            let l=document.createElement("div")
+            l.className="label"
+            l.innerText="Top"
+            l.style.top="-20px"
+            l.style.left = (i*80+20)+"px"
+            container.appendChild(l)
+        }
+
+        if(mode.value==="queue"){
+            if(i===0){
+                let l=document.createElement("div")
+                l.className="label"
+                l.innerText="Front"
+                l.style.top="-20px"
+                l.style.left=(i*80+10)+"px"
+                container.appendChild(l)
+            }
+
+            if(i===data.length-1){
+                let l=document.createElement("div")
+                l.className="label"
+                l.innerText="Rear"
+                l.style.top="-20px"
+                l.style.left=(i*80+30)+"px"
+                container.appendChild(l)
+            }
+        }
+    })
+
+    info.innerText = `${mode.value.toUpperCase()} | Size: ${data.length}/${MAX}`
+}
+
+async function add(){
+    let val=input.value
+    if(val==="") return
+
+    if(data.length>=MAX){
+        showMessage("Structure is FULL")
+        return
+    }
+
+    let color=randomColor()
+
+    let block=document.createElement("div")
+    block.className="flying"
+    block.innerText=val
+    block.style.background=color
+    document.body.appendChild(block)
+
+    let start=input.getBoundingClientRect()
+    block.style.left=start.left+"px"
+    block.style.top=start.top+"px"
+
+    await sleep(50)
+
+    let end=container.getBoundingClientRect()
+    let x=end.left + data.length*80
+    let y=end.top
+
+    block.style.transform=`translate(${x-start.left}px,${y-start.top}px)`
+
+    await sleep(speed())
+
+    block.remove()
+
+    data.push({value:val,color:color})
+    input.value=""
+    showMessage("Element added")
+    render()
+}
+
+async function removeItem(){
+    if(data.length===0){
+        showMessage("Structure is EMPTY")
+        return
+    }
+
+    let index = (mode.value==="stack") ? data.length-1 : 0
+    let item = data[index]
+
+    let block=document.createElement("div")
+    block.className="flying"
+    block.innerText=item.value
+    block.style.background=item.color
+    document.body.appendChild(block)
+
+    let rect=container.children[index].getBoundingClientRect()
+    block.style.left=rect.left+"px"
+    block.style.top=rect.top+"px"
+
+    await sleep(50)
+
+    block.style.transform="translate(0,-100px)"
+    await sleep(speed()/2)
+
+    block.style.transform="translate(-200px,-100px)"
+    block.style.background="red"
+    await sleep(speed()/2)
+
+    block.remove()
+
+    if(mode.value==="stack"){
+        data.pop()
+    } else {
+        data.shift()
+    }
+
+    showMessage("Element removed")
+    render()
+}
+
+function peek(){
+    if(data.length===0){
+        showMessage("Structure is EMPTY")
+        return
+    }
+
+    let val = (mode.value==="stack") 
+        ? data[data.length-1].value 
+        : data[0].value
+
+    showMessage("Peek: " + val)
+}
+
+async function autoDemo(){
+    await addVal(10)
+    await addVal(20)
+    await addVal(30)
+    await sleep(500)
+    await removeItem()
+    await removeItem()
+}
+
+async function addVal(v){
+    input.value=v
+    await add()
+}
+
+render()
+
+</script>
+
+</body>
+</html>

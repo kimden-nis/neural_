@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>String Reversal using Stack (Pro)</title>
+
+<style>
+body{
+    font-family: Arial;
+    text-align:center;
+}
+
+input, button{
+    font-size:16px;
+    padding:6px;
+    margin:5px;
+}
+
+/* stack */
+#stack{
+    margin:30px auto;
+    width:100px;
+    min-height:300px;
+    border:2px solid black;
+    display:flex;
+    flex-direction:column-reverse;
+    align-items:center;
+    padding:5px;
+}
+
+/* output */
+#output{
+    margin-top:30px;
+    min-height:80px;
+    border:2px solid green;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:24px;
+    letter-spacing:5px;
+}
+
+/* input preview */
+#inputPreview{
+    margin-top:10px;
+    font-size:22px;
+    letter-spacing:5px;
+}
+
+.highlight{
+    background: yellow;
+    padding:2px 4px;
+    border-radius:4px;
+}
+
+/* blocks */
+.block{
+    width:60px;
+    height:60px;
+    margin:3px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-weight:bold;
+    border-radius:6px;
+}
+
+/* flying */
+.flying{
+    position:absolute;
+    width:60px;
+    height:60px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-weight:bold;
+    border-radius:6px;
+    transition: all 1s ease;
+    z-index:1000;
+}
+
+#message{
+    margin-top:10px;
+    font-size:18px;
+    color:blue;
+}
+
+#phase{
+    margin-top:10px;
+    font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Reverse String using Stack</h2>
+
+<input id="text" placeholder="Enter text">
+
+<br>
+
+<button onclick="start()">Start</button>
+<button onclick="togglePause()">Pause / Resume</button>
+<button onclick="restart()">Restart</button>
+
+<br><br>
+
+Speed:
+<input type="range" id="speed" min="300" max="2000" value="1000">
+
+<div id="phase"></div>
+<div id="message"></div>
+
+<div id="inputPreview"></div>
+
+<h3>Stack</h3>
+<div id="stack"></div>
+
+<h3>Output</h3>
+<div id="output"></div>
+
+<script>
+
+let stack = []
+let paused = false
+
+const stackDiv = document.getElementById("stack")
+const outputDiv = document.getElementById("output")
+const message = document.getElementById("message")
+const phase = document.getElementById("phase")
+const preview = document.getElementById("inputPreview")
+
+function sleep(ms){
+    return new Promise(resolve=>{
+        let interval = setInterval(()=>{
+            if(!paused){
+                clearInterval(interval)
+                setTimeout(resolve, ms)
+            }
+        },50)
+    })
+}
+
+function speed(){
+    return document.getElementById("speed").value
+}
+
+function randomColor(){
+    return `hsl(${Math.random()*360},70%,60%)`
+}
+
+function renderStack(){
+    stackDiv.innerHTML=""
+    stack.forEach(item=>{
+        let d=document.createElement("div")
+        d.className="block"
+        d.innerText=item.char
+        d.style.background=item.color
+        stackDiv.appendChild(d)
+    })
+}
+
+function showPreview(text,index){
+    preview.innerHTML=""
+    for(let i=0;i<text.length;i++){
+        let span=document.createElement("span")
+        span.innerText=text[i]
+        if(i===index) span.className="highlight"
+        preview.appendChild(span)
+    }
+}
+
+function togglePause(){
+    paused = !paused
+    message.innerText = paused ? "Paused..." : "Resumed..."
+}
+
+function restart(){
+    location.reload()
+}
+
+async function start(){
+
+    let text = document.getElementById("text").value
+    if(text==="") return
+
+    stack=[]
+    outputDiv.innerText=""
+    preview.innerHTML=""
+    renderStack()
+
+    // PUSH PHASE
+    phase.innerText = "Phase: PUSH (Building Stack)"
+    message.innerText = ""
+
+    for(let i=0;i<text.length;i++){
+
+        showPreview(text,i)
+
+        let ch = text[i]
+        let color = randomColor()
+
+        let block=document.createElement("div")
+        block.className="flying"
+        block.innerText=ch
+        block.style.background=color
+        document.body.appendChild(block)
+
+        let inputRect = document.getElementById("text").getBoundingClientRect()
+        block.style.left=inputRect.left+"px"
+        block.style.top=inputRect.top+"px"
+
+        await sleep(50)
+
+        let target = stackDiv.getBoundingClientRect()
+        let y = target.bottom - (stack.length+1)*65
+        let x = target.left + 20
+
+        block.style.transform=`translate(${x-inputRect.left}px,${y-inputRect.top}px)`
+
+        await sleep(speed())
+
+        block.remove()
+        stack.push({char:ch,color:color})
+        renderStack()
+    }
+
+    // POP PHASE
+    phase.innerText = "Phase: POP (Reversing String)"
+
+    while(stack.length>0){
+
+        let top = stack[stack.length-1]
+
+        let block=document.createElement("div")
+        block.className="flying"
+        block.innerText=top.char
+        block.style.background=top.color
+        document.body.appendChild(block)
+
+        let stackRect = stackDiv.getBoundingClientRect()
+        let y = stackRect.bottom - stack.length*65
+        let x = stackRect.left + 20
+
+        block.style.left=x+"px"
+        block.style.top=y+"px"
+
+        await sleep(50)
+
+        // up
+        block.style.transform="translate(0,-120px)"
+        await sleep(speed()/2)
+
+        // to output
+        let outRect = outputDiv.getBoundingClientRect()
+        block.style.transform=`translate(${outRect.left-x}px,${outRect.top-y-120}px)`
+
+        await sleep(speed())
+
+        block.remove()
+
+        outputDiv.innerText += top.char
+        stack.pop()
+        renderStack()
+    }
+
+    phase.innerText = "Done ✅"
+    message.innerText = "String Reversed Successfully!"
+}
+
+</script>
+
+</body>
+</html>
